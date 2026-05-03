@@ -39,7 +39,8 @@ class EloquentResolverTest extends TestCase
 
         Schema::create('resolver_test_users', function (Blueprint $table) {
             $table->id();
-            $table->string('auth_id')->nullable()->unique();
+            $table->string('office_email')->nullable()->unique();
+            $table->string('email')->nullable()->unique();
             $table->string('employee_id')->nullable()->unique();
             $table->timestamps();
         });
@@ -51,70 +52,125 @@ class EloquentResolverTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_returns_user_found_by_default_auth_id_column(): void
+    public function test_resolves_user_by_office_email_first(): void
     {
-        ResolverTestUser::create(['auth_id' => 'sentinel-sub-001']);
+        ResolverTestUser::create([
+            'office_email' => 'work@acme.com',
+            'email' => 'unrelated@home.com',
+        ]);
+
+        $token = (object) [
+            'office_emails' => 'work@acme.com',
+            'emails' => 'someone-else@home.com',
+        ];
 
         $resolver = new EloquentResolver(ResolverTestUser::class);
-        $user = $resolver->resolve('sentinel-sub-001', (object) []);
+        $user = $resolver->resolve('ignored-sub', $token);
 
-        $this->assertInstanceOf(ResolverTestUser::class, $user);
-        $this->assertSame('sentinel-sub-001', $user->auth_id);
+        $this->assertSame('work@acme.com', $user->office_email);
     }
 
-    public function test_returns_user_found_by_custom_column(): void
+    public function test_falls_back_to_email_when_office_email_lookup_fails(): void
     {
-        ResolverTestUser::create(['employee_id' => 'EMP-999']);
+        ResolverTestUser::create([
+            'office_email' => null,
+            'email' => 'personal@home.com',
+        ]);
 
-        $resolver = new EloquentResolver(ResolverTestUser::class, 'employee_id');
-        $user = $resolver->resolve('EMP-999', (object) []);
+        $token = (object) [
+            'office_emails' => 'no-such-office@acme.com',
+            'emails' => 'personal@home.com',
+        ];
 
-        $this->assertInstanceOf(ResolverTestUser::class, $user);
-        $this->assertSame('EMP-999', $user->employee_id);
+        $resolver = new EloquentResolver(ResolverTestUser::class);
+        $user = $resolver->resolve('ignored-sub', $token);
+
+        $this->assertSame('personal@home.com', $user->email);
     }
 
-    public function test_throws_when_user_not_found(): void
+    public function test_skips_lookup_when_claim_missing(): void
     {
+        ResolverTestUser::create(['email' => 'only-personal@home.com']);
+
+        // No office_emails claim — must skip directly to emails lookup
+        $token = (object) ['emails' => 'only-personal@home.com'];
+
+        $resolver = new EloquentResolver(ResolverTestUser::class);
+        $user = $resolver->resolve('ignored-sub', $token);
+
+        $this->assertSame('only-personal@home.com', $user->email);
+    }
+
+    public function test_skips_lookup_when_claim_is_empty_string(): void
+    {
+        ResolverTestUser::create(['email' => 'fallback@home.com']);
+
+        $token = (object) ['office_emails' => '', 'emails' => 'fallback@home.com'];
+
+        $resolver = new EloquentResolver(ResolverTestUser::class);
+        $user = $resolver->resolve('ignored-sub', $token);
+
+        $this->assertSame('fallback@home.com', $user->email);
+    }
+
+    public function test_throws_when_no_lookup_matches(): void
+    {
+        ResolverTestUser::create([
+            'office_email' => 'someone@acme.com',
+            'email' => 'someone@home.com',
+        ]);
+
+        $token = (object) [
+            'office_emails' => 'missing@acme.com',
+            'emails' => 'missing@home.com',
+        ];
+
         $resolver = new EloquentResolver(ResolverTestUser::class);
 
         $this->expectException(AuthenticationException::class);
         $this->expectExceptionMessage('User not found.');
 
-        $resolver->resolve('non-existent-sub', (object) []);
+        $resolver->resolve('ignored-sub', $token);
     }
 
-    public function test_throws_even_when_other_users_exist(): void
+    public function test_throws_when_token_has_no_relevant_claims(): void
     {
-        ResolverTestUser::create(['auth_id' => 'real-user']);
+        ResolverTestUser::create(['email' => 'real@home.com']);
 
         $resolver = new EloquentResolver(ResolverTestUser::class);
 
         $this->expectException(AuthenticationException::class);
 
-        $resolver->resolve('different-sub', (object) []);
+        $resolver->resolve('ignored-sub', (object) ['unrelated' => 'value']);
     }
 
-    public function test_uses_auth_id_as_default_column(): void
+    public function test_custom_lookup_chain_is_respected(): void
     {
-        ResolverTestUser::create(['auth_id' => 'default-col-test']);
+        ResolverTestUser::create(['employee_id' => 'EMP-007']);
 
-        // No second argument — should default to auth_id
-        $resolver = new EloquentResolver(ResolverTestUser::class);
-        $user = $resolver->resolve('default-col-test', (object) []);
+        $resolver = new EloquentResolver(
+            ResolverTestUser::class,
+            ['employee_id_claim' => 'employee_id'],
+        );
 
-        $this->assertSame('default-col-test', $user->auth_id);
+        $token = (object) ['employee_id_claim' => 'EMP-007'];
+        $user = $resolver->resolve('ignored-sub', $token);
+
+        $this->assertSame('EMP-007', $user->employee_id);
     }
 
-    public function test_token_payload_passed_but_not_used_for_lookup(): void
+    public function test_does_not_use_sub_for_lookup(): void
     {
-        ResolverTestUser::create(['auth_id' => 'user-xyz']);
+        // User exists with office_email matching what would be sub-as-office-email
+        ResolverTestUser::create(['office_email' => 'sub-value@acme.com']);
 
         $resolver = new EloquentResolver(ResolverTestUser::class);
 
-        // Token has a different email — resolver must only use sub/column, not token claims
-        $decoded = (object) ['sub' => 'user-xyz', 'email' => 'other@example.com'];
-        $user = $resolver->resolve('user-xyz', $decoded);
+        // Token has no email claims — sub alone must NOT be used as a lookup value
+        $token = (object) [];
 
-        $this->assertSame('user-xyz', $user->auth_id);
+        $this->expectException(AuthenticationException::class);
+
+        $resolver->resolve('sub-value@acme.com', $token);
     }
 }

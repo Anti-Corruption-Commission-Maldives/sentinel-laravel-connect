@@ -10,6 +10,17 @@ class PlainResolver implements SentinelUserResolver
 {
     public function resolve(string $sub, object $token): object
     {
-        return (object) ['id' => $sub];
+        return (object) [
+            'id' => $sub,
+            'office_email' => $this->stringClaim($token, 'office_emails'),
+            'email' => $this->stringClaim($token, 'emails'),
+        ];
+    }
+
+    private function stringClaim(object $token, string $claim): ?string
+    {
+        $value = $token->{$claim} ?? null;
+
+        return is_string($value) && $value !== '' ? $value : null;
     }
 }

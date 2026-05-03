@@ -10,24 +10,31 @@ use Sentinel\Auth\Contracts\SentinelUserResolver;
 
 class EloquentResolver implements SentinelUserResolver
 {
-    private string $model;
-
-    private string $column;
-
-    public function __construct(string $model, string $column = 'auth_id')
-    {
-        $this->model = $model;
-        $this->column = $column;
-    }
+    /**
+     * @param  array<string, string>  $lookups  Map of token claim => DB column. Tried in order.
+     */
+    public function __construct(
+        private string $model,
+        private array $lookups = [
+            'office_emails' => 'office_email',
+            'emails' => 'email',
+        ],
+    ) {}
 
     public function resolve(string $sub, object $token): Model
     {
-        $user = ($this->model)::where($this->column, $sub)->first();
+        foreach ($this->lookups as $claim => $column) {
+            $value = $token->{$claim} ?? null;
+            if (! is_string($value) || $value === '') {
+                continue;
+            }
 
-        if (! $user) {
-            throw new AuthenticationException('User not found.');
+            $user = ($this->model)::where($column, $value)->first();
+            if ($user) {
+                return $user;
+            }
         }
 
-        return $user;
+        throw new AuthenticationException('User not found.');
     }
 }

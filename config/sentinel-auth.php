@@ -11,12 +11,16 @@ return [
     | User Resolver
     |--------------------------------------------------------------------------
     |
-    | 'plain'    — returns (object) ['id' => $sub]. No DB required.
-    | 'eloquent' — finds user by user_column matching sub. Fails if not found.
+    | 'plain'    — returns (object) ['id' => $sub, 'office_email' => ..., 'email' => ...]. No DB.
+    | 'eloquent' — finds user by lookups (token claim => DB column), in order.
+    |              Default: office_emails → office_email column, then emails → email column.
     | FQCN       — your own class implementing SentinelUserResolver contract.
     |
     */
-    'resolver'    => env('SENTINEL_AUTH_RESOLVER', 'plain'),
-    'user_model'  => null,
-    'user_column' => 'auth_id',
+    'resolver'   => env('SENTINEL_AUTH_RESOLVER', 'plain'),
+    'user_model' => null,
+    'lookups'    => [
+        'office_emails' => 'office_email',
+        'emails'        => 'email',
+    ],
 ];

@@ -25,7 +25,10 @@ class SentinelAuthServiceProvider extends ServiceProvider
 
             if ($resolver === 'eloquent') {
                 $model = config('sentinel-auth.user_model');
-                $column = config('sentinel-auth.user_column', 'auth_id');
+                $lookups = config('sentinel-auth.lookups', [
+                    'office_emails' => 'office_email',
+                    'emails' => 'email',
+                ]);
 
                 if (! $model) {
                     throw new \RuntimeException(
@@ -33,7 +36,7 @@ class SentinelAuthServiceProvider extends ServiceProvider
                     );
                 }
 
-                return new EloquentResolver($model, $column);
+                return new EloquentResolver($model, $lookups);
             }
 
             // Custom FQCN
