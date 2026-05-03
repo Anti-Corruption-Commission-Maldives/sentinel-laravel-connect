@@ -114,6 +114,7 @@ jobs:
       - name: Install dependencies
         run: |
           composer require \
+            "laravel/framework:${{ matrix.laravel }}" \
             "orchestra/testbench:${{ matrix.testbench }}" \
             "phpunit/phpunit:${{ matrix.phpunit }}" \
             --dev --no-interaction --no-update
