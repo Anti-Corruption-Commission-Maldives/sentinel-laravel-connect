@@ -8,7 +8,6 @@ use Firebase\JWT\JWK;
 use Firebase\JWT\JWT;
 use Firebase\JWT\SignatureInvalidException;
 use Illuminate\Auth\AuthenticationException;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
@@ -19,9 +18,6 @@ trait ValidatesJwt
         return 'sentinel_jwks_'.md5($this->sentinelAuthUrl);
     }
 
-    /**
-     * @throws ConnectionException
-     */
     private function fetchJwks(): array
     {
         $response = Http::timeout(10)->get($this->sentinelAuthUrl.'/.well-known/jwks.json');
