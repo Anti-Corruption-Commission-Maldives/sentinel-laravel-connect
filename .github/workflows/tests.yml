@@ -109,7 +109,7 @@ jobs:
           extensions: openssl, pdo, pdo_sqlite, sqlite3
           coverage: none
 
-      - name: Pin Laravel + testbench versions
+      - name: Install dependencies
         run: |
           composer require \
             "illuminate/auth:${{ matrix.laravel }}" \
@@ -118,10 +118,8 @@ jobs:
             "illuminate/support:${{ matrix.laravel }}" \
             "orchestra/testbench:${{ matrix.testbench }}" \
             "phpunit/phpunit:${{ matrix.phpunit }}" \
-            --no-update --no-interaction
-
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+            --no-interaction --no-update
+          composer update --no-interaction --prefer-dist
 
       - name: Run tests
         run: ./vendor/bin/phpunit --testdox
