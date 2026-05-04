@@ -12,8 +12,8 @@ class PlainResolver implements SentinelUserResolver
     {
         return (object) [
             'id' => $sub,
-            'office_email' => $this->stringClaim($token, 'office_emails'),
-            'email' => $this->stringClaim($token, 'emails'),
+            'official_email' => $this->stringClaim($token, 'official_email'),
+            'email' => $this->stringClaim($token, 'email'),
         ];
     }
 

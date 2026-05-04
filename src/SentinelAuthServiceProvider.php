@@ -26,8 +26,8 @@ class SentinelAuthServiceProvider extends ServiceProvider
             if ($resolver === 'eloquent') {
                 $model = config('sentinel-auth.user_model');
                 $lookups = config('sentinel-auth.lookups', [
-                    'office_emails' => 'office_email',
-                    'emails' => 'email',
+                    'official_email' => 'official_email',
+                    'email' => 'email',
                 ]);
 
                 if (! $model) {

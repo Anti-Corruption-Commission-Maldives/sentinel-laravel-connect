@@ -37,7 +37,7 @@ class SentinelAuthServiceProviderTest extends TestCase
         config([
             'sentinel-auth.resolver' => 'eloquent',
             'sentinel-auth.user_model' => ResolverTestUser::class,
-            'sentinel-auth.lookups' => ['emails' => 'email'],
+            'sentinel-auth.lookups' => ['email' => 'email'],
         ]);
 
         $resolver = $this->app->make(SentinelUserResolver::class);
@@ -113,7 +113,7 @@ class SentinelAuthServiceProviderTest extends TestCase
         $this->assertSame(60, (int) config('sentinel-auth.cache_ttl'));
         $this->assertSame('plain', config('sentinel-auth.resolver'));
         $this->assertSame(
-            ['office_emails' => 'office_email', 'emails' => 'email'],
+            ['official_email' => 'official_email', 'email' => 'email'],
             config('sentinel-auth.lookups'),
         );
     }

@@ -16,8 +16,8 @@ class EloquentResolver implements SentinelUserResolver
     public function __construct(
         private string $model,
         private array $lookups = [
-            'office_emails' => 'office_email',
-            'emails' => 'email',
+            'official_email' => 'official_email',
+            'email' => 'email',
         ],
     ) {}
 

@@ -39,7 +39,7 @@ class EloquentResolverTest extends TestCase
 
         Schema::create('resolver_test_users', function (Blueprint $table) {
             $table->id();
-            $table->string('office_email')->nullable()->unique();
+            $table->string('official_email')->nullable()->unique();
             $table->string('email')->nullable()->unique();
             $table->string('employee_id')->nullable()->unique();
             $table->timestamps();
@@ -52,34 +52,34 @@ class EloquentResolverTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_resolves_user_by_office_email_first(): void
+    public function test_resolves_user_by_official_email_first(): void
     {
         ResolverTestUser::create([
-            'office_email' => 'work@acme.com',
+            'official_email' => 'work@acme.com',
             'email' => 'unrelated@home.com',
         ]);
 
         $token = (object) [
-            'office_emails' => 'work@acme.com',
-            'emails' => 'someone-else@home.com',
+            'official_email' => 'work@acme.com',
+            'email' => 'someone-else@home.com',
         ];
 
         $resolver = new EloquentResolver(ResolverTestUser::class);
         $user = $resolver->resolve('ignored-sub', $token);
 
-        $this->assertSame('work@acme.com', $user->office_email);
+        $this->assertSame('work@acme.com', $user->official_email);
     }
 
-    public function test_falls_back_to_email_when_office_email_lookup_fails(): void
+    public function test_falls_back_to_email_when_official_email_lookup_fails(): void
     {
         ResolverTestUser::create([
-            'office_email' => null,
+            'official_email' => null,
             'email' => 'personal@home.com',
         ]);
 
         $token = (object) [
-            'office_emails' => 'no-such-office@acme.com',
-            'emails' => 'personal@home.com',
+            'official_email' => 'no-such-office@acme.com',
+            'email' => 'personal@home.com',
         ];
 
         $resolver = new EloquentResolver(ResolverTestUser::class);
@@ -92,8 +92,8 @@ class EloquentResolverTest extends TestCase
     {
         ResolverTestUser::create(['email' => 'only-personal@home.com']);
 
-        // No office_emails claim — must skip directly to emails lookup
-        $token = (object) ['emails' => 'only-personal@home.com'];
+        // No official_email claim — must skip directly to email lookup
+        $token = (object) ['email' => 'only-personal@home.com'];
 
         $resolver = new EloquentResolver(ResolverTestUser::class);
         $user = $resolver->resolve('ignored-sub', $token);
@@ -105,7 +105,20 @@ class EloquentResolverTest extends TestCase
     {
         ResolverTestUser::create(['email' => 'fallback@home.com']);
 
-        $token = (object) ['office_emails' => '', 'emails' => 'fallback@home.com'];
+        $token = (object) ['official_email' => '', 'email' => 'fallback@home.com'];
+
+        $resolver = new EloquentResolver(ResolverTestUser::class);
+        $user = $resolver->resolve('ignored-sub', $token);
+
+        $this->assertSame('fallback@home.com', $user->email);
+    }
+
+    public function test_skips_lookup_when_claim_is_null(): void
+    {
+        ResolverTestUser::create(['email' => 'fallback@home.com']);
+
+        // Token has both claims, official_email is explicitly null (matches real Sentinel tokens)
+        $token = (object) ['official_email' => null, 'email' => 'fallback@home.com'];
 
         $resolver = new EloquentResolver(ResolverTestUser::class);
         $user = $resolver->resolve('ignored-sub', $token);
@@ -116,13 +129,13 @@ class EloquentResolverTest extends TestCase
     public function test_throws_when_no_lookup_matches(): void
     {
         ResolverTestUser::create([
-            'office_email' => 'someone@acme.com',
+            'official_email' => 'someone@acme.com',
             'email' => 'someone@home.com',
         ]);
 
         $token = (object) [
-            'office_emails' => 'missing@acme.com',
-            'emails' => 'missing@home.com',
+            'official_email' => 'missing@acme.com',
+            'email' => 'missing@home.com',
         ];
 
         $resolver = new EloquentResolver(ResolverTestUser::class);
@@ -161,8 +174,8 @@ class EloquentResolverTest extends TestCase
 
     public function test_does_not_use_sub_for_lookup(): void
     {
-        // User exists with office_email matching what would be sub-as-office-email
-        ResolverTestUser::create(['office_email' => 'sub-value@acme.com']);
+        // User exists with official_email matching what would be sub-as-official-email
+        ResolverTestUser::create(['official_email' => 'sub-value@acme.com']);
 
         $resolver = new EloquentResolver(ResolverTestUser::class);
 

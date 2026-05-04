@@ -32,16 +32,16 @@ class PlainResolverTest extends TestCase
         $this->assertSame('  spaces-and-CAPS-123  ', $result->id);
     }
 
-    public function test_exposes_office_email_and_email_from_token_claims(): void
+    public function test_exposes_official_email_and_email_from_token_claims(): void
     {
         $token = (object) [
-            'office_emails' => 'work@acme.com',
-            'emails' => 'personal@home.com',
+            'official_email' => 'work@acme.com',
+            'email' => 'personal@home.com',
         ];
 
         $result = $this->resolver->resolve('sub-1', $token);
 
-        $this->assertSame('work@acme.com', $result->office_email);
+        $this->assertSame('work@acme.com', $result->official_email);
         $this->assertSame('personal@home.com', $result->email);
     }
 
@@ -49,27 +49,27 @@ class PlainResolverTest extends TestCase
     {
         $result = $this->resolver->resolve('sub-1', (object) []);
 
-        $this->assertNull($result->office_email);
+        $this->assertNull($result->official_email);
         $this->assertNull($result->email);
     }
 
     public function test_empty_string_claims_become_null(): void
     {
-        $token = (object) ['office_emails' => '', 'emails' => ''];
+        $token = (object) ['official_email' => '', 'email' => ''];
 
         $result = $this->resolver->resolve('sub-1', $token);
 
-        $this->assertNull($result->office_email);
+        $this->assertNull($result->official_email);
         $this->assertNull($result->email);
     }
 
     public function test_non_string_claims_become_null(): void
     {
-        $token = (object) ['office_emails' => ['a@b.com'], 'emails' => 123];
+        $token = (object) ['official_email' => ['a@b.com'], 'email' => 123];
 
         $result = $this->resolver->resolve('sub-1', $token);
 
-        $this->assertNull($result->office_email);
+        $this->assertNull($result->official_email);
         $this->assertNull($result->email);
     }
 
