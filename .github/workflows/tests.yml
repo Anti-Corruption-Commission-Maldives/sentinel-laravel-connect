@@ -100,6 +100,21 @@ jobs:
             phpunit: '^11.0'
             experimental: true
 
+          # Laravel 13 — PHP 8.3, 8.4, 8.5
+          - php: '8.3'
+            laravel: '^13.0'
+            testbench: '^11.0'
+            phpunit: '^11.0'
+          - php: '8.4'
+            laravel: '^13.0'
+            testbench: '^11.0'
+            phpunit: '^11.0'
+          - php: '8.5'
+            laravel: '^13.0'
+            testbench: '^11.0'
+            phpunit: '^11.0'
+            experimental: true
+
     continue-on-error: ${{ matrix.experimental == true }}
 
     steps:
