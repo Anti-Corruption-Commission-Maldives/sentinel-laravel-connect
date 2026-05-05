@@ -67,13 +67,16 @@ Use this for simple apps or services that only need the user's identity, not a l
 
 ### Eloquent
 
-Looks up a local Eloquent model by matching a column against the `sub` claim. Throws `AuthenticationException` if the user is not found — **does not create users**.
+Looks up a local Eloquent model using one or more token claims mapped to database columns. By default it tries `official_email` first, then `email`. Throws `AuthenticationException` if the user is not found — **does not create users**.
 
 ```php
 // config/sentinel-auth.php
 'resolver'    => 'eloquent',
 'user_model'  => \App\Models\User::class,
-'user_column' => 'auth_id', // column matched against sub claim
+'lookups' => [
+    'official_email' => 'official_email',
+    'email' => 'email',
+],
 ```
 
 The user **must already exist** in your database. Use this for apps where users are pre-provisioned.
@@ -91,10 +94,9 @@ Implement `Sentinel\Auth\Contracts\SentinelUserResolver`:
 
 namespace App\Auth;
 
-use Illuminate\Auth\AuthenticationException;
-use Lcobucci\JWT\UnencryptedToken;
-use Sentinel\Auth\Contracts\SentinelUserResolver;
 use App\Models\User;
+use Illuminate\Auth\AuthenticationException;
+use Sentinel\Auth\Contracts\SentinelUserResolver;
 
 class SentinelResolver implements SentinelUserResolver
 {
@@ -200,25 +202,25 @@ The guard resolves and caches the user on the first call. Subsequent calls withi
 // config/sentinel-auth.php
 return [
     // Sentinel Auth server base URL
-    'url'          => env('SENTINEL_AUTH_URL'),
+    'url' => env('SENTINEL_AUTH_URL'),
 
     // Expected audience claim in tokens — must match what Sentinel issues
-    'audience'     => env('SENTINEL_AUTH_AUDIENCE', 'sentinel-api'),
-
-    // Default key ID used when token has no kid header
-    'default_kid'  => env('SENTINEL_AUTH_DEFAULT_KID', 'sentinel-auth'),
+    'audience' => env('SENTINEL_AUTH_AUDIENCE', 'sentinel-api'),
 
     // How long to cache the JWKS public key (minutes)
-    'cache_ttl'    => env('SENTINEL_AUTH_CACHE_TTL', 60),
+    'cache_ttl' => env('SENTINEL_AUTH_CACHE_TTL', 60),
 
     // Resolver: 'plain' | 'eloquent' | FQCN of custom class
-    'resolver'     => env('SENTINEL_AUTH_RESOLVER', 'plain'),
+    'resolver' => env('SENTINEL_AUTH_RESOLVER', 'plain'),
 
     // Required when resolver = 'eloquent'
-    'user_model'   => null,
+    'user_model' => null,
 
-    // Column matched against the sub claim (eloquent resolver only)
-    'user_column'  => 'auth_id',
+    // Map token claim => database column, tried in order
+    'lookups' => [
+        'official_email' => 'official_email',
+        'email' => 'email',
+    ],
 ];
 ```
 

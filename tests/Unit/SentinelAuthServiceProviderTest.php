@@ -109,7 +109,6 @@ class SentinelAuthServiceProviderTest extends TestCase
     public function test_default_config_values_are_set(): void
     {
         $this->assertSame('sentinel-api', config('sentinel-auth.audience'));
-        $this->assertSame('sentinel-auth', config('sentinel-auth.default_kid'));
         $this->assertSame(60, (int) config('sentinel-auth.cache_ttl'));
         $this->assertSame('plain', config('sentinel-auth.resolver'));
         $this->assertSame(

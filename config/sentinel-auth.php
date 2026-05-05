@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     'url' => env('SENTINEL_AUTH_URL'),
     'audience' => env('SENTINEL_AUTH_AUDIENCE', 'sentinel-api'),
-    'default_kid' => env('SENTINEL_AUTH_DEFAULT_KID', 'sentinel-auth'),
     'cache_ttl' => env('SENTINEL_AUTH_CACHE_TTL', 60), // minutes
 
     /*
