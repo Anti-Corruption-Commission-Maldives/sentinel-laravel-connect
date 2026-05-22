@@ -27,6 +27,25 @@ jobs:
         run: ./vendor/bin/pint --test src/ tests/
 
   # -----------------------------------------------------------------------
+  # Static analysis (Larastan / PHPStan)
+  # -----------------------------------------------------------------------
+  analyse:
+    name: Static Analysis (Larastan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - name: Install dependencies
+        run: |
+          composer require larastan/larastan --dev --no-interaction --no-update
+          composer update --no-interaction --prefer-dist
+      - name: Run PHPStan
+        run: ./vendor/bin/phpstan analyse --memory-limit=2G
+
+  # -----------------------------------------------------------------------
   # Syntax check — confirms source is valid PHP on versions we can't
   # fully test because Laravel 8/9 (EOL) have security advisories that
   # block composer from installing them in a fresh environment.
