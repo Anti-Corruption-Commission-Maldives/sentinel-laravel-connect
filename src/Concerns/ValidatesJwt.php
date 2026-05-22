@@ -20,6 +20,9 @@ trait ValidatesJwt
         return 'sentinel_jwks_'.md5($this->sentinelAuthUrl);
     }
 
+    /**
+     * @return array{keys: list<array<array-key, mixed>>}
+     */
     private function fetchJwks(): array
     {
         $url = $this->sentinelAuthUrl.'/.well-known/jwks.json';
@@ -32,9 +35,10 @@ trait ValidatesJwt
             throw new \RuntimeException('Failed to fetch JWKS from Sentinel.');
         }
 
+        $rawKeys = $response->json('keys');
         $keys = array_filter(
-            $response->json('keys') ?? [],
-            fn ($key) => ($key['kty'] ?? '') === 'RSA'
+            is_array($rawKeys) ? $rawKeys : [],
+            fn ($key) => is_array($key) && ($key['kty'] ?? '') === 'RSA'
         );
 
         if (empty($keys)) {
@@ -51,15 +55,20 @@ trait ValidatesJwt
         return ['keys' => array_values($keys)];
     }
 
+    /**
+     * @return array{keys: list<array<array-key, mixed>>}
+     */
     private function getCachedJwks(): array
     {
         $key = $this->cacheKey();
         $hit = Cache::has($key);
         $this->debug('jwks.cache', ['hit' => $hit, 'key' => $key]);
 
+        $ttl = config('sentinel-auth.cache_ttl', 60);
+
         return Cache::remember(
             $key,
-            now()->addMinutes((int) config('sentinel-auth.cache_ttl', 60)),
+            now()->addMinutes(is_numeric($ttl) ? (int) $ttl : 60),
             fn () => $this->fetchJwks()
         );
     }
@@ -101,8 +110,9 @@ trait ValidatesJwt
             throw new AuthenticationException('Token audience mismatch.');
         }
 
+        $rawSub = $decoded->sub ?? null;
         $this->debug('decode.success', [
-            'sub' => $this->redactId(isset($decoded->sub) ? (string) $decoded->sub : null),
+            'sub' => $this->redactId(is_scalar($rawSub) ? (string) $rawSub : null),
             'audience' => $audience,
             'claims' => array_keys((array) $decoded),
         ]);

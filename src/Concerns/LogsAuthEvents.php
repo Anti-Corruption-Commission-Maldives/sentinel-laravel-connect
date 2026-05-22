@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Log;
 
 trait LogsAuthEvents
 {
+    /**
+     * @param  array<string, mixed>  $context
+     */
     private function debug(string $event, array $context = []): void
     {
         if (! config('app.debug', false)) {

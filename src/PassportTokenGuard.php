@@ -32,7 +32,7 @@ class PassportTokenGuard implements Guard
 
     public function user(): mixed
     {
-        if ($this->user) {
+        if ($this->user !== null) {
             return $this->user;
         }
 
@@ -50,7 +50,8 @@ class PassportTokenGuard implements Guard
 
         try {
             $decoded = $this->decodeToken($tokenString);
-            $sub = (string) ($decoded->sub ?? '');
+            $rawSub = $decoded->sub ?? '';
+            $sub = is_scalar($rawSub) ? (string) $rawSub : '';
 
             if ($sub === '') {
                 $this->debug('guard.missing_sub');
@@ -86,6 +87,9 @@ class PassportTokenGuard implements Guard
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $credentials
+     */
     public function validate(array $credentials = []): bool
     {
         return false;

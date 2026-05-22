@@ -1,0 +1,16 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: max
+
+    paths:
+        - src
+
+    ignoreErrors:
+        # The guard caches whatever the resolver returns, which is mixed by
+        # contract and not necessarily Authenticatable (e.g. PlainResolver
+        # returns a stdClass). Intentional deviation from Laravel's Guard.
+        -
+            identifier: assign.propertyType
+            path: src/PassportTokenGuard.php

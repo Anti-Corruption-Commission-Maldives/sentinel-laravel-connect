@@ -11,6 +11,7 @@ use Sentinel\Auth\Contracts\SentinelUserResolver;
 class EloquentResolver implements SentinelUserResolver
 {
     /**
+     * @param  class-string<Model>  $model
      * @param  array<string, string>  $lookups  Map of token claim => DB column. Tried in order.
      */
     public function __construct(
