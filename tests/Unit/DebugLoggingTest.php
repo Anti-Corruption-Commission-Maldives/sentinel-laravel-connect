@@ -78,6 +78,44 @@ class DebugLoggingTest extends TestCase
         $this->assertStringNotContainsString($token, $serialized);
     }
 
+    public function test_debug_logging_does_not_recurse_into_guard(): void
+    {
+        // Regression: a log pipeline that resolves the authenticated user
+        // (Telescope, a Monolog processor calling auth()) re-enters user()
+        // for every debug line. Before $this->user is cached this looped
+        // forever. The re-entrancy guard must short-circuit those calls.
+        config(['app.debug' => true]);
+
+        $token = $this->buildToken();
+        $this->fakeJwks(static::$primaryKey);
+
+        $guard = $this->makeGuard($token);
+
+        $startCount = 0;
+        $depth = 0;
+        Log::listen(function (MessageLogged $event) use (&$startCount, &$depth, $guard) {
+            if (! str_starts_with($event->message, '[sentinel-auth]')) {
+                return;
+            }
+            if ($event->message === '[sentinel-auth] guard.start') {
+                $startCount++;
+            }
+            // Hard cap keeps the suite from hanging if the guard regresses.
+            if ($depth >= 10) {
+                return;
+            }
+            $depth++;
+            $guard->user();
+            $depth--;
+        });
+
+        $user = $guard->user();
+
+        $this->assertNotNull($user);
+        $this->assertSame('user-sub-123', $user->id);
+        $this->assertSame(1, $startCount, 'guard.start logged more than once — re-entrancy loop');
+    }
+
     public function test_logs_failure_with_exception_class(): void
     {
         config(['app.debug' => true]);

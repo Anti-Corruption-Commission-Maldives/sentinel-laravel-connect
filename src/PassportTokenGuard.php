@@ -21,6 +21,8 @@ class PassportTokenGuard implements Guard
 
     private SentinelUserResolver $resolver;
 
+    private bool $resolving = false;
+
     public function __construct(
         protected Request $request,
         string $sentinelAuthUrl,
@@ -36,6 +38,13 @@ class PassportTokenGuard implements Guard
             return $this->user;
         }
 
+        // Guard against re-entrancy: debug logging may pass through a log
+        // pipeline (Telescope, Monolog processors) that resolves the auth
+        // user, calling back into user() before $this->user is cached.
+        if ($this->resolving) {
+            return null;
+        }
+
         $tokenString = $this->request->bearerToken();
         if (! $tokenString) {
             $this->debug('guard.no_bearer_token');
@@ -43,12 +52,14 @@ class PassportTokenGuard implements Guard
             return null;
         }
 
-        $this->debug('guard.start', [
-            'token' => $this->redactToken($tokenString),
-            'resolver' => $this->resolver::class,
-        ]);
+        $this->resolving = true;
 
         try {
+            $this->debug('guard.start', [
+                'token' => $this->redactToken($tokenString),
+                'resolver' => $this->resolver::class,
+            ]);
+
             $decoded = $this->decodeToken($tokenString);
             $rawSub = $decoded->sub ?? '';
             $sub = is_scalar($rawSub) ? (string) $rawSub : '';
@@ -84,6 +95,8 @@ class PassportTokenGuard implements Guard
                 'message' => $e->getMessage(),
             ]);
             throw new AuthenticationException('Authentication failed.');
+        } finally {
+            $this->resolving = false;
         }
     }
 
